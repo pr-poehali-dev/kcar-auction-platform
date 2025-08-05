@@ -4,6 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import Icon from '@/components/ui/icon';
 
 interface AuctionItem {
@@ -19,6 +24,41 @@ interface AuctionItem {
   fuel: string;
   status: 'active' | 'ending' | 'upcoming';
   bids: number;
+  images: string[];
+  engine: string;
+  transmission: string;
+  color: string;
+  vin: string;
+  condition: string;
+  inspectionReport: {
+    overall: number;
+    exterior: number;
+    interior: number;
+    engine: number;
+    transmission: number;
+    issues: string[];
+  };
+  seller: string;
+  reservePrice?: number;
+}
+
+interface Notification {
+  id: number;
+  type: 'bid_outbid' | 'auction_ending' | 'auction_won' | 'auction_lost';
+  message: string;
+  timestamp: Date;
+  read: boolean;
+  auctionId: number;
+}
+
+interface UserProfile {
+  name: string;
+  email: string;
+  phone: string;
+  memberSince: Date;
+  totalBids: number;
+  wonAuctions: number;
+  rating: number;
 }
 
 const mockAuctions: AuctionItem[] = [
@@ -28,13 +68,33 @@ const mockAuctions: AuctionItem[] = [
     image: '/img/ceabb3f6-5392-4765-9589-74774c5f7e06.jpg',
     currentBid: 18500000,
     startPrice: 15000000,
-    timeLeft: 2 * 60 * 60 + 15 * 60 + 30, // 2h 15m 30s in seconds
+    timeLeft: 2 * 60 * 60 + 15 * 60 + 30,
     location: '서울',
     year: 2015,
     mileage: 85000,
     fuel: '가솔린',
     status: 'active',
-    bids: 24
+    bids: 24,
+    images: [
+      '/img/ceabb3f6-5392-4765-9589-74774c5f7e06.jpg',
+      '/img/c36f38b3-7e14-480c-960d-adafd115d0d4.jpg',
+      '/img/3a18931d-1a42-4b19-a929-e889623de1c7.jpg'
+    ],
+    engine: '3.8L V6',
+    transmission: '자동 8단',
+    color: '실버',
+    vin: 'KMHGC4DE***456789',
+    condition: '양호',
+    inspectionReport: {
+      overall: 85,
+      exterior: 90,
+      interior: 80,
+      engine: 88,
+      transmission: 85,
+      issues: ['타이어 교체 필요', '작은 스크래치 (운전석 문)']
+    },
+    seller: '개인',
+    reservePrice: 20000000
   },
   {
     id: 2,
@@ -42,13 +102,28 @@ const mockAuctions: AuctionItem[] = [
     image: '/img/24054aed-2936-4ee6-92c8-7784a0db4992.jpg',
     currentBid: 9200000,
     startPrice: 8000000,
-    timeLeft: 45 * 60, // 45m in seconds
+    timeLeft: 45 * 60,
     location: '부산',
     year: 2018,
     mileage: 42000,
     fuel: '가솔린',
     status: 'ending',
-    bids: 18
+    bids: 18,
+    images: ['/img/24054aed-2936-4ee6-92c8-7784a0db4992.jpg'],
+    engine: '1.4L 직렬4기통',
+    transmission: '수동 5단',
+    color: '화이트',
+    vin: 'KNADE123***789012',
+    condition: '우수',
+    inspectionReport: {
+      overall: 92,
+      exterior: 95,
+      interior: 90,
+      engine: 90,
+      transmission: 88,
+      issues: ['정기 점검 완료']
+    },
+    seller: '딜러'
   },
   {
     id: 3,
@@ -56,15 +131,60 @@ const mockAuctions: AuctionItem[] = [
     image: '/img/52a589c6-f8a3-4b52-843f-a0d68da0992c.jpg',
     currentBid: 0,
     startPrice: 22000000,
-    timeLeft: 24 * 60 * 60, // 24h in seconds
+    timeLeft: 24 * 60 * 60,
     location: '대구',
     year: 2020,
     mileage: 28000,
     fuel: '가솔린',
     status: 'upcoming',
-    bids: 0
+    bids: 0,
+    images: ['/img/52a589c6-f8a3-4b52-843f-a0d68da0992c.jpg'],
+    engine: '2.5L 터보',
+    transmission: '자동 8단',
+    color: '다크블루',
+    vin: 'KMHL14JA***345678',
+    condition: '최상',
+    inspectionReport: {
+      overall: 96,
+      exterior: 98,
+      interior: 95,
+      engine: 95,
+      transmission: 95,
+      issues: []
+    },
+    seller: '개인',
+    reservePrice: 25000000
   }
 ];
+
+const mockNotifications: Notification[] = [
+  {
+    id: 1,
+    type: 'bid_outbid',
+    message: 'Hyundai Genesis Coupe 2015 경매에서 입찰이 경신되었습니다.',
+    timestamp: new Date(Date.now() - 5 * 60 * 1000),
+    read: false,
+    auctionId: 1
+  },
+  {
+    id: 2,
+    type: 'auction_ending',
+    message: 'Kia Rio 2018 경매가 1시간 내에 종료됩니다.',
+    timestamp: new Date(Date.now() - 30 * 60 * 1000),
+    read: false,
+    auctionId: 2
+  }
+];
+
+const mockUserProfile: UserProfile = {
+  name: '김철수',
+  email: 'kim@example.com',
+  phone: '010-1234-5678',
+  memberSince: new Date('2023-01-15'),
+  totalBids: 47,
+  wonAuctions: 8,
+  rating: 4.8
+};
 
 const Timer: React.FC<{ seconds: number }> = ({ seconds }) => {
   const [timeLeft, setTimeLeft] = useState(seconds);
@@ -209,8 +329,380 @@ const AuctionCard: React.FC<{ auction: AuctionItem }> = ({ auction }) => {
             관심목록 추가
           </Button>
         )}
+
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="w-full">
+              <Icon name="Eye" size={16} className="mr-2" />
+              상세보기
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold">{auction.title}</DialogTitle>
+            </DialogHeader>
+            <CarDetailModal auction={auction} />
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
+  );
+};
+
+const CarDetailModal: React.FC<{ auction: AuctionItem }> = ({ auction }) => {
+  const [selectedImage, setSelectedImage] = useState(0);
+  const formatPrice = (price: number) => new Intl.NumberFormat('ko-KR').format(price) + '원';
+
+  return (
+    <div className="space-y-6">
+      {/* 이미지 갤러리 */}
+      <div className="space-y-4">
+        <div className="aspect-video relative rounded-lg overflow-hidden">
+          <img 
+            src={auction.images[selectedImage]} 
+            alt={`${auction.title} ${selectedImage + 1}`}
+            className="w-full h-full object-cover"
+          />
+        </div>
+        <div className="flex gap-2 overflow-x-auto">
+          {auction.images.map((image, index) => (
+            <button
+              key={index}
+              onClick={() => setSelectedImage(index)}
+              className={`flex-shrink-0 w-20 h-16 rounded border-2 overflow-hidden ${
+                selectedImage === index ? 'border-kcar-orange' : 'border-gray-200'
+              }`}
+            >
+              <img src={image} alt={`썸네일 ${index + 1}`} className="w-full h-full object-cover" />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <Tabs defaultValue="details" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="details">차량정보</TabsTrigger>
+          <TabsTrigger value="inspection">검사리포트</TabsTrigger>
+          <TabsTrigger value="bid-history">입찰내역</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="details" className="space-y-6">
+          <div className="grid grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">기본정보</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">제조사/모델</span>
+                  <span className="font-medium">{auction.title}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">연식</span>
+                  <span className="font-medium">{auction.year}년</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">주행거리</span>
+                  <span className="font-medium">{auction.mileage.toLocaleString()}km</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">연료</span>
+                  <span className="font-medium">{auction.fuel}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">색상</span>
+                  <span className="font-medium">{auction.color}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">위치</span>
+                  <span className="font-medium">{auction.location}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">기술사양</h3>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">엔진</span>
+                  <span className="font-medium">{auction.engine}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">변속기</span>
+                  <span className="font-medium">{auction.transmission}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">VIN</span>
+                  <span className="font-medium font-mono">{auction.vin}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">판매자</span>
+                  <span className="font-medium">{auction.seller}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">상태</span>
+                  <span className="font-medium">{auction.condition}</span>
+                </div>
+                {auction.reservePrice && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">희망가격</span>
+                    <span className="font-medium text-kcar-orange">{formatPrice(auction.reservePrice)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="inspection" className="space-y-6">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">종합 검사 점수: {auction.inspectionReport.overall}/100</h3>
+            
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span>외관 ({auction.inspectionReport.exterior}/100)</span>
+                </div>
+                <Progress value={auction.inspectionReport.exterior} className="h-2" />
+              </div>
+              
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span>내장 ({auction.inspectionReport.interior}/100)</span>
+                </div>
+                <Progress value={auction.inspectionReport.interior} className="h-2" />
+              </div>
+              
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span>엔진 ({auction.inspectionReport.engine}/100)</span>
+                </div>
+                <Progress value={auction.inspectionReport.engine} className="h-2" />
+              </div>
+              
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span>변속기 ({auction.inspectionReport.transmission}/100)</span>
+                </div>
+                <Progress value={auction.inspectionReport.transmission} className="h-2" />
+              </div>
+            </div>
+
+            {auction.inspectionReport.issues.length > 0 && (
+              <div>
+                <h4 className="font-semibold mb-2">주의사항</h4>
+                <div className="space-y-1">
+                  {auction.inspectionReport.issues.map((issue, index) => (
+                    <Alert key={index}>
+                      <Icon name="AlertTriangle" size={16} />
+                      <AlertDescription>{issue}</AlertDescription>
+                    </Alert>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="bid-history" className="space-y-4">
+          <h3 className="text-lg font-semibold">입찰 내역 ({auction.bids}건)</h3>
+          <div className="space-y-2">
+            {[...Array(Math.min(auction.bids, 10))].map((_, index) => (
+              <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">입찰자 {String.fromCharCode(65 + index)}</span>
+                  <Badge variant="outline">개인</Badge>
+                </div>
+                <div className="text-right">
+                  <div className="font-semibold">
+                    {formatPrice(auction.startPrice + (auction.bids - index) * 100000)}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {new Date(Date.now() - index * 15 * 60 * 1000).toLocaleTimeString('ko-KR')}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
+const NotificationCenter: React.FC<{ notifications: Notification[] }> = ({ notifications }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'bid_outbid': return 'TrendingUp';
+      case 'auction_ending': return 'Clock';
+      case 'auction_won': return 'Trophy';
+      case 'auction_lost': return 'X';
+      default: return 'Bell';
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" className="relative">
+          <Icon name="Bell" size={20} />
+          {unreadCount > 0 && (
+            <Badge className="absolute -top-1 -right-1 bg-auction-red text-white text-xs">
+              {unreadCount}
+            </Badge>
+          )}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>알림</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 max-h-96 overflow-y-auto">
+          {notifications.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">새로운 알림이 없습니다.</p>
+          ) : (
+            notifications.map(notification => (
+              <div key={notification.id} className={`p-3 rounded-lg border ${
+                notification.read ? 'bg-gray-50' : 'bg-blue-50 border-blue-200'
+              }`}>
+                <div className="flex items-start gap-3">
+                  <Icon name={getNotificationIcon(notification.type)} size={16} className="mt-1 text-kcar-blue" />
+                  <div className="flex-1">
+                    <p className="text-sm">{notification.message}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {notification.timestamp.toLocaleString('ko-KR')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const UserProfileModal: React.FC<{ profile: UserProfile }> = ({ profile }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="ghost" className="flex items-center gap-2">
+          <Icon name="User" size={20} />
+          <span className="hidden md:inline">{profile.name}</span>
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>내 프로필</DialogTitle>
+        </DialogHeader>
+        
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="profile">프로필</TabsTrigger>
+            <TabsTrigger value="bids">입찰내역</TabsTrigger>
+            <TabsTrigger value="watchlist">관심목록</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="profile" className="space-y-6">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">기본정보</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">이름</span>
+                    <span className="font-medium">{profile.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">이메일</span>
+                    <span className="font-medium">{profile.email}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">전화번호</span>
+                    <span className="font-medium">{profile.phone}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">가입일</span>
+                    <span className="font-medium">{profile.memberSince.toLocaleDateString('ko-KR')}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">활동통계</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">총 입찰</span>
+                    <span className="font-medium text-kcar-blue">{profile.totalBids}회</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">낙찰</span>
+                    <span className="font-medium text-auction-green">{profile.wonAuctions}회</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">성공률</span>
+                    <span className="font-medium">
+                      {((profile.wonAuctions / profile.totalBids) * 100).toFixed(1)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">평점</span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium">{profile.rating}</span>
+                      <Icon name="Star" size={16} className="text-yellow-500 fill-current" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="bids" className="space-y-4">
+            <h3 className="text-lg font-semibold">최근 입찰 내역</h3>
+            <div className="space-y-3">
+              {mockAuctions.slice(0, 2).map(auction => (
+                <div key={auction.id} className="p-4 border rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <img src={auction.image} alt={auction.title} className="w-16 h-12 object-cover rounded" />
+                    <div className="flex-1">
+                      <h4 className="font-medium">{auction.title}</h4>
+                      <p className="text-sm text-gray-600">내 최고입찰: {new Intl.NumberFormat('ko-KR').format(auction.currentBid)}원</p>
+                    </div>
+                    <Badge className={auction.status === 'active' ? 'bg-auction-green' : 'bg-gray-500'}>
+                      {auction.status === 'active' ? '진행중' : '종료'}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="watchlist" className="space-y-4">
+            <h3 className="text-lg font-semibold">관심 차량</h3>
+            <div className="space-y-3">
+              {mockAuctions.filter(a => a.status === 'upcoming').map(auction => (
+                <div key={auction.id} className="p-4 border rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <img src={auction.image} alt={auction.title} className="w-16 h-12 object-cover rounded" />
+                    <div className="flex-1">
+                      <h4 className="font-medium">{auction.title}</h4>
+                      <p className="text-sm text-gray-600">시작가: {new Intl.NumberFormat('ko-KR').format(auction.startPrice)}원</p>
+                    </div>
+                    <Button size="sm" variant="outline">
+                      <Icon name="Heart" size={16} className="mr-1" />
+                      관심해제
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   );
 };
 
@@ -219,6 +711,29 @@ const Index: React.FC = () => {
   const [selectedBrand, setSelectedBrand] = useState('');
   const [selectedYear, setSelectedYear] = useState('');
   const [filteredAuctions, setFilteredAuctions] = useState(mockAuctions);
+  const [notifications, setNotifications] = useState(mockNotifications);
+  const [showToast, setShowToast] = useState(false);
+
+  // 실시간 알림 시뮬레이션
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (Math.random() > 0.8) { // 20% 확률로 새 알림 생성
+        const newNotification: Notification = {
+          id: Date.now(),
+          type: 'bid_outbid',
+          message: '새로운 입찰이 들어왔습니다!',
+          timestamp: new Date(),
+          read: false,
+          auctionId: mockAuctions[Math.floor(Math.random() * mockAuctions.length)].id
+        };
+        setNotifications(prev => [newNotification, ...prev]);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+      }
+    }, 30000); // 30초마다 체크
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     let filtered = mockAuctions;
@@ -264,6 +779,8 @@ const Index: React.FC = () => {
               <a href="#" className="hover:text-kcar-orange transition-colors">등록하기</a>
               <a href="#" className="hover:text-kcar-orange transition-colors">이용방법</a>
               <a href="#" className="hover:text-kcar-orange transition-colors">고객센터</a>
+              <NotificationCenter notifications={notifications} />
+              <UserProfileModal profile={mockUserProfile} />
               <Button className="bg-kcar-orange hover:bg-kcar-orange-light text-white">
                 로그인
               </Button>
@@ -450,6 +967,16 @@ const Index: React.FC = () => {
           </div>
         </div>
       </footer>
+
+      {/* 실시간 알림 토스트 */}
+      {showToast && (
+        <div className="fixed bottom-4 right-4 bg-kcar-blue text-white p-4 rounded-lg shadow-lg animate-fade-in z-50">
+          <div className="flex items-center gap-2">
+            <Icon name="Bell" size={20} />
+            <span>새로운 입찰 알림이 있습니다!</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
